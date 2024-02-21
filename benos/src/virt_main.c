@@ -7,7 +7,7 @@ void virt_main()
 
 	el = read_sysreg(CurrentEL);
 	printk("prv el = %d\n", el >> 2);
-	printk("jumping to VM...\n");
+	printk("entering to VM...\n");
 
 	jump_to_vm();
 
@@ -16,4 +16,7 @@ void virt_main()
 
 	printk("current el = %d\n", cur);
 
+	hvc_call(10);
+
+	printk("back to VM (el=%d): hvc call done\n", read_sysreg(CurrentEL) >> 2);
 }

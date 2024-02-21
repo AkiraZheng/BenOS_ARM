@@ -1,4 +1,5 @@
 #include "sysregs.h"
+#include "esr.h"
 
 #define S_FRAME_SIZE 272 /* sizeof(struct pt_regs)	// */
 #define S_X0 0 /* offsetof(struct pt_regs, regs[0])	// */
@@ -31,7 +32,9 @@
 #define BAD_FIQ         2
 #define BAD_ERROR       3
 
-.macro virt_entry
+#if 1
+/* 从VM退出到hypervisor，需要保存上下文到栈里 */
+.macro vm_exit el
 	sub sp, sp, #S_FRAME_SIZE
 
 	/*
@@ -53,8 +56,12 @@
 	stp x26, x27, [sp, #16 *13]
 	stp x28, x29, [sp, #16 *14]
 
-	/* x21: 栈顶 的位置*/
-	add     x21, sp, #S_FRAME_SIZE
+	.if \el == 1
+		mrs x21, sp_el1
+	.else
+		/* x21: 栈顶 的位置*/
+		add     x21, sp, #S_FRAME_SIZE
+	.endif
 
 	mrs     x22, elr_el2
 	mrs     x23, spsr_el2
@@ -66,11 +73,17 @@
 	stp     x22, x23, [sp, #S_PC]
 .endm
 
-.macro virt_exit
+/* 从hypervisor 进入到 VM，需要从栈中 恢复 上下文 */
+.macro vm_entry el
 	/* 从pt_regs->pc中恢复elr_el1,
 	   从pt_regs->pstate中恢复spsr_el1
 	   */
 	ldp     x21, x22, [sp, #S_PC]           // load ELR, SPSR
+
+	.if \el == 1
+		ldr x23, [sp, #S_SP]
+		msr sp_el1, x23
+	.endif
 
 	msr     elr_el2, x21                    // set up the return data
 	msr     spsr_el2, x22
@@ -97,11 +110,86 @@
 	eret
 .endm
 
+#else
+
+/* 从VM退出到hypervisor，需要保存上下文到栈里 */
+vm_exit:
+	sub sp, sp, #S_FRAME_SIZE
+
+	/*
+	   保存通用寄存器x0~x29到栈框里pt_regs->x0~x29
+	 */
+	stp x0, x1, [sp, #16 *0]
+	stp x2, x3, [sp, #16 *1]
+	stp x4, x5, [sp, #16 *2]
+	stp x6, x7, [sp, #16 *3]
+	stp x8, x9, [sp, #16 *4]
+	stp x10, x11, [sp, #16 *5]
+	stp x12, x13, [sp, #16 *6]
+	stp x14, x15, [sp, #16 *7]
+	stp x16, x17, [sp, #16 *8]
+	stp x18, x19, [sp, #16 *9]
+	stp x20, x21, [sp, #16 *10]
+	stp x22, x23, [sp, #16 *11]
+	stp x24, x25, [sp, #16 *12]
+	stp x26, x27, [sp, #16 *13]
+	stp x28, x29, [sp, #16 *14]
+
+	/* x21: 栈顶 的位置*/
+	//add     x21, sp, #S_FRAME_SIZE
+	mrs x21, sp_el1
+
+	mrs     x22, elr_el2
+	mrs     x23, spsr_el2
+
+	/* 把lr保存到pt_regs->lr, 把sp保存到pt_regs->sp位置*/
+	stp     lr, x21, [sp, #S_LR]
+	/* 把elr_el2保存到pt_regs->pc中
+	   把spsr_el2保存到pt_regs->pstate中*/
+	stp     x22, x23, [sp, #S_PC]
+	ret
+
+/* 从hypervisor 进入到 VM，需要从栈中 恢复 上下文 */
+vm_entry:
+	/* 从pt_regs->pc中恢复elr_el1,
+	   从pt_regs->pstate中恢复spsr_el1
+	   */
+	ldp     x21, x22, [sp, #S_PC]           // load ELR, SPSR
+
+        /* */
+	ldr x23, [sp, #S_SP]
+	msr sp_el1, x23
+
+	msr     elr_el2, x21                    // set up the return data
+	msr     spsr_el2, x22
+	ldp     x0, x1, [sp, #16 * 0]
+	ldp     x2, x3, [sp, #16 * 1]
+	ldp     x4, x5, [sp, #16 * 2]
+	ldp     x6, x7, [sp, #16 * 3]
+	ldp     x8, x9, [sp, #16 * 4]
+	ldp     x10, x11, [sp, #16 * 5]
+	ldp     x12, x13, [sp, #16 * 6]
+	ldp     x14, x15, [sp, #16 * 7]
+	ldp     x16, x17, [sp, #16 * 8]
+	ldp     x18, x19, [sp, #16 * 9]
+	ldp     x20, x21, [sp, #16 * 10]
+	ldp     x22, x23, [sp, #16 * 11]
+	ldp     x24, x25, [sp, #16 * 12]
+	ldp     x26, x27, [sp, #16 * 13]
+	ldp     x28, x29, [sp, #16 * 14]
+
+
+	/* 从pt_regs->lr中恢复lr*/
+	ldr     lr, [sp, #S_LR]
+	add     sp, sp, #S_FRAME_SIZE           // restore sp
+	eret
+	ret
+#endif
+
 /*
    处理无效的异常向量
  */
 	.macro inv_entry el, reason
-	virt_entry
 	mov x0, sp
 	mov x1, #\reason
 	mrs x2, esr_el1
@@ -162,10 +250,24 @@ __invalid:
 	inv_entry 1, BAD_ERROR
 
 __do_vcpu_exit:
-	b .
+	vm_exit 1
+	mrs  x25, esr_el2
+	lsr     x24, x25, #ESR_ELx_EC_SHIFT     // exception class
+	cmp     x24, #ESR_ELx_EC_HVC64
+	b.eq    vm_hvc
+	
+	mov x0, sp
+	mov x1, #BAD_SYNC
+	mrs x2, esr_el2
+	bl bad_mode
+
+vm_hvc:
+	mov x0, sp
+	bl vm_hvc_handler
+	vm_entry 1
 
 el2_sync_invalid:
-	virt_entry
+	vm_exit 2
 	mov x0, sp
 	mov x1, #BAD_SYNC
 	mrs x2, esr_el2
@@ -200,9 +302,15 @@ jump_to_vm:
 	adr x2, vm_sp
 	add  x2, x2, #4096
 	msr sp_el1, x2
-
+	
 	eret
 
 /* 从这里开始运行VM第一条指令 */
 vm_entry:
 	ret
+
+.global hvc_call
+hvc_call:
+	hvc     0x0
+	ret
+

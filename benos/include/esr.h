@@ -67,6 +67,7 @@
 #define ESR_ELx_EC(esr)		(((esr) & ESR_ELx_EC_MASK) >> ESR_ELx_EC_SHIFT)
 
 #define ESR_ELx_IL		(UL(1) << 25)
+#define ESR_ELx_IL_SHIFT	(25)
 #define ESR_ELx_ISS_MASK	(ESR_ELx_IL - 1)
 #define ESR_ELx_ISV		(UL(1) << 24)
 #define ESR_ELx_SAS_SHIFT	(22)
