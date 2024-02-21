@@ -10,8 +10,12 @@ COPS += -DCONFIG_BOARD_PI4B
 QEMU_FLAGS  += -machine raspi4
 endif
 
+# run EL2 for virtualization
+COPS += -DCONFIG_VIRT
+ASMOPS += -DCONFIG_VIRT
+
 COPS += -g -Wall -nostdlib -Iinclude -mgeneral-regs-only
-ASMOPS = -g -Iinclude 
+ASMOPS += -g -Iinclude 
 
 BUILD_DIR = build
 SRC_DIR = src

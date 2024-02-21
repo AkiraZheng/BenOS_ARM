@@ -433,8 +433,16 @@ void panic(void)
 
 void bad_mode(struct pt_regs *regs, int reason, unsigned int esr)
 {
+	unsigned long addr;
+
+#ifdef CONFIG_VIRT
+	addr = read_sysreg(far_el2);
+#else
+	addr = read_sysreg(far_el1)
+#endif
+
 	printk("Bad mode for %s handler detected, far:0x%x esr:0x%x - %s\n",
-			bad_mode_handler[reason], read_sysreg(far_el1),
+			bad_mode_handler[reason], addr,
 			esr, esr_get_class_string(esr));
 
 	parse_esr(esr);
@@ -507,7 +515,7 @@ static void test_mmu(void)
 	printk("test AT instruction %s\n", (addr == pa) ? "done" : "failed");
 
 	test_access_map_address();
-	//test_access_unmap_address();
+	test_access_unmap_address();
 }
 
 extern char idmap_pg_dir[];
@@ -631,10 +639,10 @@ void kernel_main(void)
 
 	my_fp_neon_test();
 
-	//trigger_alignment();
+	trigger_alignment();
 	printk("done\n");
 
-	dump_pgtable();
+	//dump_pgtable();
 
 	test_walk_pgtable();
 	init_cache_info();

@@ -28,10 +28,31 @@ master:
 	b.eq el3_entry
 	b el2_entry
 
-
 el3_entry:
 	eret
 
+#ifdef CONFIG_VIRT
+el2_entry:
+	bl print_el
+
+	# init vpidr and vmpidr
+	mrs     x0, midr_el1
+	mrs     x1, mpidr_el1
+	msr     vpidr_el2, x0
+	msr     vmpidr_el2, x1
+
+	# disable PF and SIMD trap into OS
+	ldr x0, =(3UL << 20);
+	msr     CPTR_EL2, x0
+
+       /* 设置异常向量表基地址到vbar寄存器 */
+	ldr     x5, =virt_vectors
+	msr     vbar_el2, x5
+	isb
+
+	b boot_kernel
+
+#else
 el2_entry:
 	bl print_el
 
@@ -49,6 +70,7 @@ el2_entry:
 	msr elr_el2, x0
 
 	eret
+#endif
 
 el1_entry:
 	bl print_el
@@ -61,13 +83,19 @@ el1_entry:
 	msr     vbar_el1, x5
 	isb
 
+boot_kernel:
 	adr	x0, _bss
 	adr	x1, _ebss
 	sub	x1, x1, x0
 	bl 	memzero
 
 	bl create_page_table
-	bl enable_mmu
+
+#ifdef CONFIG_VIRT
+	bl enable_mmu_el2
+#else
+	bl enable_mmu_el1
+#endif
 
 	/* set sp to top of kernel_sp*/
 	adr x2, kernel_sp
@@ -99,7 +127,7 @@ print_el:
 	mov x30, x10
 	ret
 
-enable_mmu:
+enable_mmu_el1:
 	tlbi	vmalle1	// Invalidate local TLB
 	dsb	nsh
 
@@ -120,6 +148,34 @@ enable_mmu:
 	msr ttbr0_el1, x0
 	isb
 	msr sctlr_el1, x3
+	isb
+
+	ic	iallu
+	dsb	nsh
+	isb
+	ret
+
+enable_mmu_el2:
+	tlbi	alle2	// Invalidate local TLB
+	dsb	nsh
+
+	ldr	x5, =MAIR(0x00, MT_DEVICE_nGnRnE) | \
+		     MAIR(0x04, MT_DEVICE_nGnRE) | \
+		     MAIR(0x0c, MT_DEVICE_GRE) | \
+		     MAIR(0x44, MT_NORMAL_NC) | \
+		     MAIR(0xff, MT_NORMAL) | \
+		     MAIR(0xbb, MT_NORMAL_WT)
+	msr	mair_el2, x5
+
+	ldr	x10, =TCR_TxSZ(VA_BITS) | TCR_TG_FLAGS | TCR_CACHE_FLAGS
+	msr	tcr_el2, x10
+
+	ldr x3, =(SCTLR_ELx_M | SCTLR_ELx_C)
+
+	adrp	x0, idmap_pg_dir
+	msr ttbr0_el2, x0
+	isb
+	msr sctlr_el2, x3
 	isb
 
 	ic	iallu
