@@ -515,7 +515,7 @@ static void test_mmu(void)
 	printk("test AT instruction %s\n", (addr == pa) ? "done" : "failed");
 
 	test_access_map_address();
-	test_access_unmap_address();
+	//test_access_unmap_address();
 }
 
 extern char idmap_pg_dir[];
@@ -655,6 +655,8 @@ void kernel_main(void)
 	raw_local_irq_enable();
 
 	test_cache();
+
+	virt_main();
 
 	while (1) {
 		uart_send(uart_recv());

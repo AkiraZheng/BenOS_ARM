@@ -53,6 +53,8 @@ SECTIONS
 	idmap_pg_end = .;
 	kernel_sp = .;
 	. += 4096;
+	vm_sp = .;
+	. += 4096;
 	_edata = .;
 
 

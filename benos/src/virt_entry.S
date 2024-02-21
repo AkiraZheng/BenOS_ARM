@@ -1,3 +1,4 @@
+#include "sysregs.h"
 
 #define S_FRAME_SIZE 272 /* sizeof(struct pt_regs)	// */
 #define S_X0 0 /* offsetof(struct pt_regs, regs[0])	// */
@@ -169,3 +170,39 @@ el2_sync_invalid:
 	mov x1, #BAD_SYNC
 	mrs x2, esr_el2
 	bl bad_mode
+
+
+/*
+   void jump_to_vs_mode(void)
+
+   跳到 虚拟机中
+ */
+.global jump_to_vm
+jump_to_vm:
+
+	/* The Execution state for EL1 is AArch64 */
+	ldr x0, =HCR_HOST_NVHE_FLAGS
+	msr hcr_el2, x0
+
+	/* disable MMU for EL1*/
+	ldr x0, =SCTLR_VALUE_MMU_DISABLED
+	msr sctlr_el1, x0
+
+	/* set SPSR jump to EL1h*/
+	ldr x0, =SPSR_EL1
+	msr spsr_el2, x0
+
+	/* set VM entry address*/
+	adr x0, vm_entry
+	msr elr_el2, x0
+	
+        # set VM's SP
+	adr x2, vm_sp
+	add  x2, x2, #4096
+	msr sp_el1, x2
+
+	eret
+
+/* 从这里开始运行VM第一条指令 */
+vm_entry:
+	ret
