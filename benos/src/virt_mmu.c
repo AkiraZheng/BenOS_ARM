@@ -4,11 +4,19 @@
 #include "error.h"
 
 /*
- * 本实验采用 “IPA 44Bits + 4KB页面 + 4级映射“ 的方式来创建S2页表。
+ * 本实验要创建S2 concatenated页表，并且IPA bits 为43，页面粒度为4KB
  *
- * 根页表（root page table）的大小为4KB
+ *
+ * 对于 IPA地址为43bit + 4KB页面粒度的S2 concatenated页表来说，
+ * 采用3级页表的方式，即没有了PGD，只有PUD,PMD和PT。
+ *
+ * IPA 中的Bit[42 ~39] 原来是在PGD中的，现在需要 挤压/串联 (concatenated)
+ * 到PUD中 ，那么 PUD就会扩大16倍，即相应有16个PUD表。
+ *
+ * 根页表（root page table）的大小为16个PUD页表, 16 PAGE_SIZE, 即64KB大小 + 64KB aligned
  * */
-#define S2_ROOT_PG_SIZE  (PAGE_SIZE)
+
+#define S2_ROOT_PG_SIZE  (PAGE_SIZE * 16)
 char s2_pg_dir[S2_ROOT_PG_SIZE] __attribute__((aligned(S2_ROOT_PG_SIZE)));
 
 static void flush_all_vms(void)
@@ -69,6 +77,8 @@ static unsigned long get_vtcr_el2(unsigned int parange, unsigned int ipa_bits,
 	// vmid -- 8bit
 	value |= (0x0 << 19);
 
+	printk("%s vtcr value 0x%lx\n", __func__, value);
+
 	return value;
 }
 
@@ -90,6 +100,10 @@ void write_stage2_pg_reg(void)
 		pgtable_levels = 4;
 	} 
 
+	/* 本实验要创建S2 concatenated页表，所以页表levels 为3 */
+	ipa_bits = 43;
+	pgtable_levels = 3;
+
 	val = get_vtcr_el2(parange, ipa_bits, pgtable_levels, tg);
 	write_sysreg(val, vtcr_el2);
 	
@@ -99,19 +113,16 @@ void write_stage2_pg_reg(void)
 }
 
 /*
- * 这里使用"44bit IPA + 4级映射" 来创建S2页表
+ * 这里使用43bit IPA 映射方式来创建S2 concatenated页表
  */
-#define S2_IPA_BITS                    44UL
-
-#define S2_PGD_SHIFT			39UL
-#define S2_PGD_SIZE			(1UL << S2_PGD_SHIFT)
-#define S2_PGD_MASK			(~(S2_PGD_SIZE - 1))
-#define S2_PTRS_PER_PGD                 (1 << (S2_IPA_BITS - S2_PGD_SHIFT))
+#define S2_IPA_BITS                    43UL
 
 #define S2_PUD_SHIFT			30UL
 #define S2_PUD_SIZE			(1UL << S2_PUD_SHIFT)
 #define S2_PUD_MASK			(~(S2_PUD_SIZE - 1))
-#define S2_PTRS_PER_PUD                 (1 << (S2_PGD_SHIFT - S2_PUD_SHIFT))
+
+/* 注意：对于S2 concatenated页表，这里S2_PTRS_PER_PUD 和之前 略有变化*/
+#define S2_PTRS_PER_PUD                 (1 << (S2_IPA_BITS - S2_PUD_SHIFT))
 
 #define S2_PMD_SHIFT			21UL
 #define S2_PMD_SIZE			(1UL << S2_PMD_SHIFT)
@@ -121,17 +132,12 @@ void write_stage2_pg_reg(void)
 #define S2_PTE_SIZE			(1UL << S2_PTE_SHIFT)
 #define S2_PTE_MASK			(~(S2_PTE_SIZE - 1))
 
+/* 注意：对于S2 concatenated页表，这里s2_pud_xxx 这几个宏 和之前 略有变化*/
 #define s2_pud_index(addr) (((addr) >> S2_PUD_SHIFT) & (S2_PTRS_PER_PUD - 1))
-#define s2_pud_offset_raw(pgd, addr) ((pud_t *)(((pud_t *)(pgd_page_paddr(*(pgd))) \
-			+ s2_pud_index(addr))))
+#define s2_pud_offset_raw(pg_dir, addr) ((pud_t *)(((pud_t *)(pg_dir)) \
+			+ s2_pud_index(addr)))
 
-#define s2_pud_offset(pgd, addr) (s2_pud_offset_raw(pgd, (addr)))
-
-#define s2_pgd_index(addr) (((addr) >> S2_PGD_SHIFT) & (S2_PTRS_PER_PGD - 1))
-#define s2_pgd_offset_raw(pg_dir, addr) ((pgd_t *)(((pgd_t *)(pg_dir)) \
-			+ s2_pgd_index(addr)))
-
-#define s2_pgd_offset(pg_dir, addr) (s2_pgd_offset_raw(pg_dir, (addr)))
+#define s2_pud_offset(pg_dir, addr) (s2_pud_offset_raw(pg_dir, (addr)))
 
 #define __pa(x) (x)
 
@@ -227,18 +233,11 @@ int stage2_page_fault(unsigned long gpa, unsigned long hpa, unsigned long size, 
 	pte_t *pte;
 
 	//printk("%s s2_pgdir 0x%lx\n", __func__, &s2_pg_dir);
-	//
-	pgd = s2_pgd_offset(&s2_pg_dir, gpa); 
-	if (!pgd)
-		return -ENOMEM;
-
-	//printk("pgd 0x%lx\n pgd_index 0x%x pgd_val 0x%lx\n", (unsigned long)pgd, s2_pgd_index(gpa), pgd_val(*pgd));
-
-	pud = pud_alloc(pgd, gpa);
+	
+	/* S2 concatenated 页表是3级页表，没有PGD，让我们从PUD开始吧 */
+	pud = s2_pud_offset(&s2_pg_dir, gpa);
 	if (!pud)
 		return -ENOMEM;
-
-	//printk("pud 0x%lx\n pud_index 0x%x pud_val 0x%lx\n", (unsigned long)pud, s2_pud_index(gpa), pud_val(*pud));
 
 	pmd = pmd_alloc(pud, gpa); 
 	if (!pmd)
