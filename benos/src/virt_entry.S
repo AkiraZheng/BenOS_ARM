@@ -255,11 +255,19 @@ __do_vcpu_exit:
 	lsr     x24, x25, #ESR_ELx_EC_SHIFT     // exception class
 	cmp     x24, #ESR_ELx_EC_HVC64
 	b.eq    vm_hvc
-	
-	mov x0, sp
-	mov x1, #BAD_SYNC
-	mrs x2, esr_el2
+	cmp     x24, #ESR_ELx_EC_DABT_LOW       // data abort in VM
+	b.eq  vm_da
+	cmp     x24, #ESR_ELx_EC_IABT_LOW       // instruction abort in VM
+	b.eq  vm_ia
 	bl bad_mode
+
+vm_ia:
+vm_da:
+	mrs     x0, hpfar_el2
+	mov     x1, x25
+	mov     x2, sp
+	bl do_vm_mem_abort
+	vm_entry 1
 
 vm_hvc:
 	mov x0, sp

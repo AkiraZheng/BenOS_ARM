@@ -33,6 +33,10 @@
 #define pmd_none(pmd) (!pmd_val(pmd))
 #define pte_none(ptd) (!pte_val(ptd))
 
+#define pgd_present(pgd) (pgd_val(pgd))
+#define pud_present(pud) (pud_val(pud))
+#define pmd_present(pmd) (pmd_val(pmd))
+
 #define pmd_sect(pmd)	((pmd_val(pmd) & PMD_TYPE_MASK) == \
 				 PMD_TYPE_SECT)
 #define pud_sect(pud)	((pud_val(pud) & PUD_TYPE_MASK) == \

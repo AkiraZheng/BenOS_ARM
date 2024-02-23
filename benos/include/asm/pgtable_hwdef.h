@@ -111,6 +111,7 @@
 #define TCR_TxSZ_WIDTH		6
 #define TCR_T0SZ_MASK		(((UL(1) << TCR_TxSZ_WIDTH) - 1) << TCR_T0SZ_OFFSET)
 
+
 #define TCR_EPD0_SHIFT		7
 #define TCR_EPD0_MASK		(UL(1) << TCR_EPD0_SHIFT)
 #define TCR_IRGN0_SHIFT		8
@@ -167,6 +168,7 @@
 
 #define TCR_TG0_SHIFT		14
 #define TCR_TG0_MASK		(UL(3) << TCR_TG0_SHIFT)
+#define TG0_4K                   (UL(0))
 #define TCR_TG0_4K		(UL(0) << TCR_TG0_SHIFT)
 #define TCR_TG0_64K		(UL(1) << TCR_TG0_SHIFT)
 #define TCR_TG0_16K		(UL(2) << TCR_TG0_SHIFT)
@@ -192,6 +194,12 @@
 #define TCR_KASAN_FLAGS 0
 #define TCR_SMP_FLAGS   TCR_SHARED
 #define TCR_CACHE_FLAGS (TCR_IRGN_WBWA | TCR_ORGN_WBWA | TCR_SHARED)
+
+/*
+ * VTCR flags
+ */
+#define VTCR_T0SZ_OFFSET		0
+#define VTCR_T0SZ(x)		((UL(64) - (x)) << VTCR_T0SZ_OFFSET)
 
 /* id_aa64mmfr0 */
 #define ID_AA64MMFR0_TGRAN4_SHIFT	28
