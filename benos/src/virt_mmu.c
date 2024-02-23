@@ -4,19 +4,19 @@
 #include "error.h"
 
 /*
- * 本实验要创建S2 concatenated页表，并且IPA bits 为43，页面粒度为4KB
+ * 本实验要创建S2 concatenated页表，并且IPA bits 为40，页面粒度为4KB
  *
  *
- * 对于 IPA地址为43bit + 4KB页面粒度的S2 concatenated页表来说，
+ * 对于 IPA地址为40bit + 4KB页面粒度的S2 concatenated页表来说，
  * 采用3级页表的方式，即没有了PGD，只有PUD,PMD和PT。
  *
- * IPA 中的Bit[42 ~39] 原来是在PGD中的，现在需要 挤压/串联 (concatenated)
- * 到PUD中 ，那么 PUD就会扩大16倍，即相应有16个PUD表。
+ * IPA 中的Bit[39] 原来是在PGD中的，现在需要 挤压/串联 (concatenated)
+ * 到PUD中 ，那么 PUD就会扩大1倍，即相应有2个PUD表。
  *
- * 根页表（root page table）的大小为16个PUD页表, 16 PAGE_SIZE, 即64KB大小 + 64KB aligned
+ * 根页表（root page table）的大小为2个PUD页表, 2 * PAGE_SIZE, 即8KB大小 + 8KB aligned
  * */
 
-#define S2_ROOT_PG_SIZE  (PAGE_SIZE * 16)
+#define S2_ROOT_PG_SIZE  (PAGE_SIZE * 2)
 char s2_pg_dir[S2_ROOT_PG_SIZE] __attribute__((aligned(S2_ROOT_PG_SIZE)));
 
 static void flush_all_vms(void)
@@ -100,8 +100,8 @@ void write_stage2_pg_reg(void)
 		pgtable_levels = 4;
 	} 
 
-	/* 本实验要创建S2 concatenated页表，所以页表levels 为3 */
-	ipa_bits = 43;
+	/* 本实验要创建S2 concatenated页表，页表levels 为3, IPA bits = 40 */
+	ipa_bits = 40;
 	pgtable_levels = 3;
 
 	val = get_vtcr_el2(parange, ipa_bits, pgtable_levels, tg);
@@ -113,9 +113,9 @@ void write_stage2_pg_reg(void)
 }
 
 /*
- * 这里使用43bit IPA 映射方式来创建S2 concatenated页表
+ * 这里使用40 bit IPA 映射方式来创建S2 concatenated页表
  */
-#define S2_IPA_BITS                    43UL
+#define S2_IPA_BITS                    40UL
 
 #define S2_PUD_SHIFT			30UL
 #define S2_PUD_SIZE			(1UL << S2_PUD_SHIFT)
