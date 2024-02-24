@@ -20,11 +20,20 @@ void virt_main()
 	write_stage2_pg_reg();
 
 	printk("entering to VM...\n");
+
 	gpa_addr = jump_to_vm(gpa_addr);
 
+	while (1);
+}
+
+/* gos start */
+void gos_start(unsigned long gpa_addr)
+{
+	unsigned long gva_addr;
 	unsigned long cur;
 	cur = read_sysreg(CurrentEL) >> 2;
 	printk("current EL %d\n", cur);
+	printk("In VM gpa_addr 0x%lx\n", gpa_addr);
 
 	hvc_call(10);
 
@@ -40,3 +49,4 @@ void virt_main()
 
 	while (1);
 }
+

@@ -320,7 +320,7 @@ jump_to_vm:
 
 /* 从这里开始运行VM第一条指令 */
 vm_entry:
-	ret
+	bl gos_start
 
 .global hvc_call
 hvc_call:
