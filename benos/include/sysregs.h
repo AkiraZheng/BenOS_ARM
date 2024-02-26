@@ -13,7 +13,7 @@
 
 #define HCR_RW          (1UL << 31)
 
-#define HCR_HOST_NVHE_FLAGS (HCR_RW | HCR_EL2_VM)
+#define HCR_HOST_NVHE_FLAGS (HCR_RW | HCR_EL2_VM | HCR_EL2_IMO)
 
 #define SCTLR_ELx_C     (1<<2) /*data cache enable*/
 #define SCTLR_ELx_M	(1<<0)

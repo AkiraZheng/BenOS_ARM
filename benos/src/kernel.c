@@ -441,7 +441,8 @@ void bad_mode(struct pt_regs *regs, int reason, unsigned int esr)
 	addr = read_sysreg(far_el1)
 #endif
 
-	printk("Bad mode for %s handler detected, far:0x%x esr:0x%x - %s\n",
+	printk("EL%d Bad mode for %s handler detected, far:0x%x esr:0x%x - %s\n",
+			read_sysreg(CurrentEL) >> 2,
 			bad_mode_handler[reason], addr,
 			esr, esr_get_class_string(esr));
 
@@ -651,7 +652,6 @@ void kernel_main(void)
 	gic_init(0, GIC_V2_DISTRIBUTOR_BASE, GIC_V2_CPU_INTERFACE_BASE);
 
 	timer_init();
-	//system_timer_init();
 	raw_local_irq_enable();
 
 	test_cache();

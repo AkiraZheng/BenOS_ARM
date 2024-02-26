@@ -1,11 +1,12 @@
 #include "io.h"
 #include "virt.h"
+#include "sysregs.h"
 
 #define GOS_VS_MEM 0x80000000
 
 void virt_main()
 {
-	unsigned long el;
+	unsigned long el, val;
 
 	unsigned long gpa_addr, gva_addr;
 
@@ -18,6 +19,12 @@ void virt_main()
 	printk("prv el = %d\n", el >> 2);
 
 	write_stage2_pg_reg();
+
+	val = read_sysreg(hcr_el2);
+	val |= HCR_HOST_NVHE_FLAGS; 
+	write_sysreg(val, hcr_el2);
+
+	printk("hcr_el2 0x%lx\n", read_sysreg(hcr_el2));
 
 	printk("entering to VM...\n");
 

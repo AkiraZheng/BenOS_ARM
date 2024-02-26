@@ -143,7 +143,7 @@ void gic_handle_irq(void)
 
 		//printk("%s: irqnr %d\n", __func__, irqnr);
 
-		if (irqnr == GENERIC_TIMER_IRQ)
+		if (irqnr == GENERIC_TIMER_IRQ || irqnr == HP_TIMER_IRQ)
 			handle_timer_irq();
 		else if (irqnr == SYSTEM_TIMER1_IRQ)
 			handle_stimer_irq();

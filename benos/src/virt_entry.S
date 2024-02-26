@@ -228,14 +228,14 @@ virt_vectors:
 	/* EL2 with SPx
 	 */
 	vtentry el2_sync_invalid 
-	vtentry __invalid
+	vtentry el2_irq
 	vtentry __invalid
 	vtentry __invalid
 
 	/* Lower EL using AArch64
 	 */
 	vtentry __do_vcpu_exit
-	vtentry __invalid
+	vtentry vm_irq
 	vtentry __invalid
 	vtentry __invalid
 
@@ -281,6 +281,16 @@ el2_sync_invalid:
 	mrs x2, esr_el2
 	bl bad_mode
 
+el2_irq:
+	vm_exit 2
+	bl hp_irq_handle
+	vm_entry 2
+
+vm_irq:
+	vm_exit 1
+	bl hp_irq_handle
+	vm_entry 1
+
 
 /*
    跳到 虚拟机中
@@ -296,8 +306,10 @@ el2_sync_invalid:
 jump_to_vm:
 
 	/* The Execution state for EL1 is AArch64 */
-	ldr x24, =HCR_HOST_NVHE_FLAGS
-	msr hcr_el2, x24
+	//ldr x23, =HCR_HOST_NVHE_FLAGS
+	//mrs x24, hcr_el2
+	//orr x24, x24, x23 
+	//msr hcr_el2, x24
 
 	/* disable MMU for EL1*/
 	//ldr x0, =SCTLR_VALUE_MMU_DISABLED
