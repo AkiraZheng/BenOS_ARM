@@ -113,7 +113,7 @@ void handle_timer_irq(void)
 {
 #ifdef CONFIG_VIRT
 	hp_generic_timer_reset(arch_timer_rate);
-	printk("Core0 Hypervisor Timer interrupt received\r\n");
+	//printk("Core0 Hypervisor Timer interrupt received\r\n");
 #else
 	generic_timer_reset(arch_timer_rate);
 	printk("Core0 Timer interrupt received\r\n");
