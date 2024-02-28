@@ -1,3 +1,6 @@
+#ifndef ASM_IRQ_H
+#define ASM_IRQ_H
+
 #include "base.h"
 
 #define IRQ_BASIC_PENDING	(PBASE+0x0000B200)
@@ -21,9 +24,11 @@
 #define LOCAL_TIMER_INT         (1 << 11)
 #define CNTPNSIRQ_Int           (1 << 1)
 
+#define MAINTEN_IRQ	  25
 #define HP_TIMER_IRQ      26
+#define V_TIMER_IRQ       27
 #define GENERIC_TIMER_IRQ 30
 #define SYSTEM_TIMER0_IRQ  96
 #define SYSTEM_TIMER1_IRQ  97
 
-void handle_timer_irq(void);
+#endif

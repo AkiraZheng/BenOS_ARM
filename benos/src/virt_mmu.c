@@ -232,7 +232,7 @@ int stage2_page_fault(unsigned long gpa, unsigned long hpa, unsigned long size, 
 	pmd_t *pmd;
 	pte_t *pte;
 
-	//printk("%s s2_pgdir 0x%lx\n", __func__, &s2_pg_dir);
+	//printk("%s s2_pgdir 0x%lx gpa 0x%lx hpa 0x%lx, prot 0x%lx\n", __func__, &s2_pg_dir, gpa, hpa, prot);
 	
 	/* S2 concatenated 页表是3级页表，没有PGD，让我们从PUD开始吧 */
 	pud = s2_pud_offset(&s2_pg_dir, gpa);
@@ -249,9 +249,29 @@ int stage2_page_fault(unsigned long gpa, unsigned long hpa, unsigned long size, 
 	if (!pte)
 		return -ENOMEM;
 
-	//printk("pte 0x%lx\n pte_index 0x%x pte_val 0x%x\n", (unsigned long)pte, pte_index(gpa), pte_val(*pte));
-
 	set_pte(pte, pfn_pte(hpa >> PAGE_SHIFT, prot));
+
+	//printk("pte 0x%lx\n pte_index 0x%x pte_val 0x%x\n", (unsigned long)pte, pte_index(gpa), pte_val(*pte));
 
 	return 0;
 }
+
+int stage2_mapping(unsigned long gpa, unsigned long hpa,
+		unsigned long size, unsigned long prot)
+{
+	unsigned long start, end, addr;
+
+	gpa = gpa & PAGE_MASK;
+	hpa = hpa & PAGE_MASK;
+
+	start = gpa;
+	end = PAGE_ALIGN(gpa + size);
+
+	for (addr = start; addr != end; addr += PAGE_SIZE) {
+		stage2_page_fault(addr, hpa, PAGE_SIZE, prot);
+		hpa += PAGE_SIZE;
+	}
+
+	return 0;
+}
+

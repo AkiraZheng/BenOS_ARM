@@ -5,4 +5,5 @@
 void gos_irq_handle(void)
 {
 	printk("%s ==\n", __func__);
+	gos_gic_handle_irq();
 }

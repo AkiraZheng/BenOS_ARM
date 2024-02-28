@@ -51,8 +51,8 @@ void gos_start(unsigned long gpa_addr)
 	printk("In VM gpa_addr 0x%lx\n", gpa_addr);
 
 	gos_main();
-	gos_mapping(gva_addr, gpa_addr);
-	printk("gva_ddr 0x%lx value 0x%lx\n", gva_addr, *(unsigned long *)gva_addr);
+	//gos_mapping(gva_addr, gpa_addr);
+	//printk("gva_ddr 0x%lx value 0x%lx\n", gva_addr, *(unsigned long *)gva_addr);
 
 	while (1);
 }

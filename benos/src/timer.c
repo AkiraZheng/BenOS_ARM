@@ -65,7 +65,7 @@ static int hp_generic_timer_reset(unsigned int val)
 
 static void hp_enable_timer_interrupt(void)
 {
-	writel(CNT_HP_IRQ, TIMER_CNTRL0);
+	writel(CNT_HP_IRQ | CNT_V_IRQ, TIMER_CNTRL0);
 }
 
 void timer_init(void)
@@ -86,6 +86,7 @@ void timer_init(void)
 
 	/* disable EL1 physical timer*/
 	write_sysreg(0, cntp_ctl_el0);
+	write_sysreg(0, cntv_ctl_el0);
 
 	/* disblae EL2 Hypervisor physical timer*/
 	write_sysreg(0, cnthp_ctl_el2);
@@ -96,7 +97,7 @@ void timer_init(void)
 	gicv2_unmask_irq(HP_TIMER_IRQ);
 
 	/* enable HCR */
-	write_sysreg(1<<4, hcr_el2);
+	//write_sysreg(1<<4, hcr_el2);
 
 	hp_enable_timer_interrupt();
 #else
@@ -109,16 +110,18 @@ void timer_init(void)
 #endif
 }
 
-void handle_timer_irq(void)
+enum irq_res handle_timer_irq(void)
 {
 #ifdef CONFIG_VIRT
 	hp_generic_timer_reset(arch_timer_rate);
-	//printk("Core0 Hypervisor Timer interrupt received\r\n");
+	printk("Core0 Hypervisor Timer interrupt received\r\n");
 #else
 	generic_timer_reset(arch_timer_rate);
-	printk("Core0 Timer interrupt received\r\n");
+	//printk("Core0 Timer interrupt received\r\n");
 #endif
 	jiffies++;
+
+	return HANDLED_BY_HYP;
 }
 
 static unsigned int stimer_val = 0;
@@ -136,10 +139,26 @@ void system_timer_init(void)
 	writel(SYSTEM_TIMER_IRQ_1, ENABLE_IRQS_0);
 }
 
-void handle_stimer_irq(void)
+enum irq_res handle_stimer_irq(void)
 {
 	stimer_val += sval;
 	writel(stimer_val, TIMER_C1);
 	writel(TIMER_CS_M1, TIMER_CS);
 	printk("Sytem Timer1 interrupt \n");
+
+	return HANDLED_BY_HYP;
+}
+
+enum irq_res handle_vtimer_irq(int hwirq)
+{
+	enum irq_res res;
+	unsigned long current = read_sysreg(cntvct_el0);
+	unsigned long cval = read_sysreg(cntv_cval_el0);
+
+	if (current >= cval) {
+		//printk("current 0x%lx cval 0x%lx\n", current, cval);
+		return inject_hw_irq(hwirq);
+	}
+
+	return HANDLED_BY_HYP;
 }

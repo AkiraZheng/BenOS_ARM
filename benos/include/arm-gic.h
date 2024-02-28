@@ -1,3 +1,7 @@
+#ifndef ARM_GICV2_H
+#define ARM_GICV2_H
+#include <asm/irq.h>
+
 #define GIC_CPU_CTRL			0x00
 #define GIC_CPU_PRIMASK			0x04
 #define GIC_CPU_BINPOINT		0x08
@@ -8,8 +12,10 @@
 #define GIC_CPU_ALIAS_BINPOINT		0x1c
 #define GIC_CPU_ACTIVEPRIO		0xd0
 #define GIC_CPU_IDENT			0xfc
+#define GIC_CPU_DIR                     0x1000
 
 #define GICC_ENABLE			0x1
+#define GICC_EOIMODE                    (1UL << 9)
 #define GICC_INT_PRI_THRESHOLD		0xf0
 #define GICC_IAR_INT_ID_MASK		0x3ff
 #define GICC_INT_SPURIOUS		1023
@@ -31,7 +37,7 @@
 #define GIC_DIST_SGI_PENDING_CLEAR	0xf10
 #define GIC_DIST_SGI_PENDING_SET	0xf20
 
-#define GICD_ENABLE			0x1
+#define GICD_ENABLE			0x3
 #define GICD_DISABLE			0x0
 #define GICD_INT_ACTLOW_LVLTRIG		0x0
 #define GICD_INT_EN_CLR_X32		0xffffffff
@@ -56,6 +62,7 @@
 
 #define GICH_HCR_EN			(1 << 0)
 #define GICH_HCR_UIE			(1 << 1)
+#define GICH_HCR_NP                     (1 << 3)
 
 #define GICH_LR_VIRTUALID		(0x3ff << 0)
 #define GICH_LR_PHYSID_CPUID_SHIFT	(10)
@@ -63,7 +70,11 @@
 #define GICH_LR_STATE			(3 << 28)
 #define GICH_LR_PENDING_BIT		(1 << 28)
 #define GICH_LR_ACTIVE_BIT		(1 << 29)
+#define GICH_LR_PENDING_ACTIVE_BIT	(3 << 28)
 #define GICH_LR_EOI			(1 << 19)
+#define GICH_LR_PRIO_SHIFT              (23)
+#define GICH_LR_GROUP1			(1 << 30)
+#define GICH_LR_HW                      (1 << 31)
 
 #define GICH_VMCR_CTRL_SHIFT		0
 #define GICH_VMCR_CTRL_MASK		(0x21f << GICH_VMCR_CTRL_SHIFT)
@@ -77,4 +88,18 @@
 #define GICH_MISR_EOI			(1 << 0)
 #define GICH_MISR_U			(1 << 1)
 
-int gic_init(int chip, unsigned long dist_base, unsigned long cpu_base);
+struct gic_chip_data {
+	unsigned long raw_dist_base;
+	unsigned long raw_cpu_base;
+	struct irq_domain *domain;
+	struct irq_chip *chip;
+	unsigned int gic_irqs;
+};
+
+#define gic_dist_base(d) ((d)->raw_dist_base)
+#define gic_cpu_base(d) ((d)->raw_cpu_base)
+
+int gic_init(int chip, unsigned long dist_base,
+		unsigned long cpu_base, unsigned long vctrl_base);
+
+#endif

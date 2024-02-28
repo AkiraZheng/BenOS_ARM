@@ -1,4 +1,8 @@
+#ifndef ASM_TIMER_H
+#define ASM_TIMER_H
+
 #include "base.h"
+#include "irq.h"
 
 /* System Timer on PI */
 #define TIMER_CS        (PBASE+0x00003000)
@@ -32,4 +36,6 @@
 #define TIMER_FLAG    (PERIPHERAL_BASE+0x38)
 
 void timer_init(void);
-void handle_timer_irq(void);
+enum irq_res handle_timer_irq(void);
+
+#endif

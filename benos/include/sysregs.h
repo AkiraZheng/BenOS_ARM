@@ -4,6 +4,7 @@
 #define HCR_EL2_FMO     (1ul << 3)  /* FMO : physical firq routing*/
 #define HCR_EL2_IMO     (1UL << 4)  /* IMO : physical irq routing*/
 #define HCR_EL2_AMO     (1UL << 5) /* AMO : Physical SError interrupt routing.*/
+#define HCR_EL2_VI      (1UL << 7)
 
 #define HCR_EL2_BSU_IS    (1UL << 10)  /* BSU_IS : Barrier Shareability upgrade*/
 #define HCR_EL2_BSU_OS    (2UL << 10)
@@ -13,7 +14,7 @@
 
 #define HCR_RW          (1UL << 31)
 
-#define HCR_HOST_NVHE_FLAGS (HCR_RW | HCR_EL2_VM | HCR_EL2_IMO)
+#define HCR_HOST_NVHE_FLAGS (HCR_RW | HCR_EL2_VM | HCR_EL2_IMO | HCR_EL2_FB | HCR_EL2_PTW | HCR_EL2_AMO | HCR_EL2_BSU_IS)
 
 #define SCTLR_ELx_C     (1<<2) /*data cache enable*/
 #define SCTLR_ELx_M	(1<<0)

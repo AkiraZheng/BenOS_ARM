@@ -24,7 +24,7 @@
 
 #define ESR_ISS_DA_ISV_BIT         (1UL << 24)
 
-static int check_uart_mmio_range(unsigned long addr)
+int check_uart_mmio_range(unsigned long addr)
 {
 	if (addr >= U_BASE && addr <= U_IMSC_REG)
 		return 1;
@@ -32,9 +32,28 @@ static int check_uart_mmio_range(unsigned long addr)
 		return 0;
 }
 
+int check_gic_dist_mmio_range(unsigned long addr)
+{
+	if (addr >= GIC_V2_DISTRIBUTOR_BASE && 
+			addr <= (GIC_V2_DISTRIBUTOR_BASE + GIC_V2_DISTRIBUTOR_SIZE))
+		return 1;
+	else
+		return 0;
+}
+
+static int check_arm_local_mmio_range(unsigned long addr)
+{
+	if (addr >= ARM_LOCAL_BASE && 
+			addr <= (ARM_LOCAL_BASE + ARM_LOCAL_SIZE))
+		return 1;
+	else
+		return 0;
+}
+
 int check_emul_mmio_range(unsigned long addr)
 {
-	return check_uart_mmio_range(addr);
+	return check_uart_mmio_range(addr) || check_gic_dist_mmio_range(addr)
+		|| check_arm_local_mmio_range(addr);
 }
 
 static unsigned long emul_readreg(struct emu_mmio_access *emu_mmio, int reg)
@@ -167,6 +186,7 @@ int emul_device(struct pt_regs *regs, unsigned long fault_addr, unsigned int esr
 	emu_mmio.sign_ext = (iss & ESR_ISS_DA_SSE_BIT) ? 1:0; 
 
 #if 0
+	if (check_gic_dist_mmio_range(fault_addr))
 	printk("%s : esr 0x%lx iss 0x%x addr 0x%lx width %d write %d reg %d reg_width %d sign_ext %d\n",
 		       	__func__, esr, iss, emu_mmio.addr, emu_mmio.width, emu_mmio.write, emu_mmio.reg,
 			emu_mmio.reg_width, emu_mmio.sign_ext);

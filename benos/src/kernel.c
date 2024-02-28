@@ -649,7 +649,8 @@ void kernel_main(void)
 	init_cache_info();
 	test_mmu();
 
-	gic_init(0, GIC_V2_DISTRIBUTOR_BASE, GIC_V2_CPU_INTERFACE_BASE);
+	gic_init(0, GIC_V2_DISTRIBUTOR_BASE, GIC_V2_CPU_INTERFACE_BASE,
+			GIC_V2_VIR_CONTROL_BASE);
 
 	timer_init();
 	raw_local_irq_enable();

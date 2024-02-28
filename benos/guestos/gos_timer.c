@@ -12,9 +12,9 @@ unsigned long boot_tick;
 
 unsigned long volatile cacheline_aligned jiffies;
 
-static unsigned int arch_timer_rate;
+static unsigned long arch_timer_rate;
 
-static unsigned int generic_timer_get_freq(void)
+static unsigned long generic_timer_get_freq(void)
 {
 	unsigned int freq;
 
@@ -32,26 +32,31 @@ static void generic_vtimer_init(void)
 	write_sysreg(1, cntv_ctl_el0);
 }	
 
-static int generic_vtimer_reset(unsigned int val)
+static int generic_vtimer_reset(unsigned long val)
 {
-	write_sysreg(val, cntv_tval_el0);
+	unsigned long current = read_sysreg(cntvct_el0);
+	//printk("%s current 0x%lx val 0x%lx\n", __func__, current ,val);
+	write_sysreg(current + val, cntv_cval_el0);
 	return 0;
 }
 
 void gos_vtimer_init(void)
 {
-	arch_timer_rate = generic_timer_get_freq();
-	printk("gos cntp freq:0x%x\r\n", arch_timer_rate);
-	cpu_khz = arch_timer_rate /= HZ;
-	printk("gos cpu_khz %d \n", arch_timer_rate, cpu_khz);
+	unsigned long val;
 
-	boot_tick = read_sysreg(cntpct_el0);
+	arch_timer_rate = generic_timer_get_freq();
+	printk("gos cntp freq:0x%lx\r\n", arch_timer_rate);
+	cpu_khz = arch_timer_rate /= HZ;
+	printk("gos cpu_khz %d \n", cpu_khz);
+
+	boot_tick = read_sysreg(cntvct_el0);
 	printk("gos boot_tick 0x%lx\n", boot_tick);
 
-	generic_vtimer_init();
 	generic_vtimer_reset(arch_timer_rate);
 
-	//gicv2_unmask_irq(HP_TIMER_IRQ);
+	gos_gicv2_unmask_irq(V_TIMER_IRQ);
+
+	generic_vtimer_init();
 }
 
 void gos_handle_vtimer_irq(void)
