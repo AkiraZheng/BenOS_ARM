@@ -172,6 +172,20 @@ static int emu_gicd_reg(struct emu_mmio_access *emu_mmio, unsigned long reg_off,
 	emul_write_addr(emu_mmio, new_val);
 }
 
+static int emu_gicd_ctr(struct emu_mmio_access *emu_mmio)
+{
+	int enable;
+
+	if (!emu_mmio->write)
+		return emu_mmio_regs(emu_mmio);
+
+	enable = emul_read_addr(emu_mmio) & GICD_ENABLE;
+
+	vgic_update_enable(enable);
+
+	return 0;
+}
+
 static int emu_gicd_mmio_regs(struct emu_mmio_access *emu_mmio)
 {
 	unsigned long addr = emu_mmio->addr;
@@ -179,11 +193,15 @@ static int emu_gicd_mmio_regs(struct emu_mmio_access *emu_mmio)
 
 	switch (reg_off){
 	case GIC_DIST_CTRL:
+		emu_gicd_ctr(emu_mmio);
+		break;
+
 	case GIC_DIST_CTR:
 	case GIC_DIST_IIDR:
 	case GIC_DIST_SOFTINT:
 		emu_mmio_regs(emu_mmio);
 		break;
+
 	case GIC_DIST_IGROUP ... GIC_DIST_IGROUPn:
 		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_IGROUP, 1);
 		break;

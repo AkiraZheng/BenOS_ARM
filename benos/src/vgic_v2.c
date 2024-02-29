@@ -154,6 +154,20 @@ static void vgicv2_init_lrs(struct vgic *vgic)
 		writel(0, base + GICH_LR0 + (i * 4));
 }
 
+void vgic_update_enable(int enable)
+{
+	unsigned long val;
+
+	val = readl(vgic.vctrl_base + GICH_HCR);
+	
+	if (enable)
+		val |= GICH_HCR_EN;
+	else
+		val &=~ GICH_HCR_EN;
+
+	writel(val, vgic.vctrl_base + GICH_HCR);
+}
+
 enum irq_res vgic_maintenance_handler(int hwirq)
 {
 	unsigned int misr;
@@ -186,10 +200,6 @@ void vgicv2_init(unsigned long vctrl_base)
 	stage2_mapping(GIC_V2_CPU_INTERFACE_BASE, GIC_V2_VCPU_INTERFACE_BASE,
 			GIC_V2_CPU_INTERFACE_SIZE, S2_PAGE_DEVICE | S2_AP_RW);
 #endif
-
-	/* enable vgic*/
-	//val = readl(vctrl_base + GICH_HCR);
-	writel(GICH_HCR_EN | 1<<2, vctrl_base + GICH_HCR);
 
 	/* enable Maintenance interrupts for GIC*/
 	gicv2_unmask_irq(25);
