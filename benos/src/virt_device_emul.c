@@ -3,6 +3,7 @@
 #include "virt.h"
 #include "ptregs.h"
 #include "error.h"
+#include <arm-gic.h>
 
 #define ESR_IL_OFFSET              (25)
 #define ESR_IL_MASK                (1 << 0)
@@ -108,7 +109,7 @@ static unsigned long emul_read_addr(struct emu_mmio_access *emu_mmio)
             val = *((unsigned long *)emu_mmio->addr);
             break;
         default:
-            printk("%s unknown emu_mmio read size\n", __func__);
+            printk("%s unknown emu_mmio read size, addr 0x%lx\n", __func__, emu_mmio->addr);
     }
 
     return val;
@@ -130,7 +131,7 @@ static void emul_write_addr(struct emu_mmio_access* emu, unsigned long val)
             *((unsigned long *)emu->addr) = val;
             break;
         default:
-            printk("%s unknown emu write size\n", __func__);
+            printk("%s unknown emu write size, addr 0x%lx\n", __func__, emu->addr);
     }
 }
 
@@ -149,6 +150,106 @@ static int emu_mmio_regs(struct emu_mmio_access *emu_mmio)
 		/* 然后写入到 ptregs->Xt 寄存器中 */
 		emul_writereg(emu_mmio, emu_mmio->reg, val);
 	}
+
+	return 0;
+}
+
+static int emu_gicd_reg(struct emu_mmio_access *emu_mmio, unsigned long reg_off,
+		unsigned long reg_group_base, int field_width)
+{
+	unsigned long old_val, new_val, write_data;
+
+	if (!emu_mmio->write)
+		return emu_mmio_regs(emu_mmio); 
+
+	old_val = emul_read_addr(emu_mmio);
+	write_data = emul_readreg(emu_mmio, emu_mmio->reg);
+
+	new_val = vgic_emul_update_fields(emu_mmio, reg_off, reg_group_base, field_width, write_data, old_val);
+
+	printk("%s reg 0x%lx old_val 0x%x write_data 0x%x new_val 0x%x\n", __func__, reg_off, old_val, write_data, new_val);
+
+	emul_write_addr(emu_mmio, new_val);
+}
+
+static int emu_gicd_mmio_regs(struct emu_mmio_access *emu_mmio)
+{
+	unsigned long addr = emu_mmio->addr;
+	unsigned long reg_off = addr & 0xfff;
+
+	switch (reg_off){
+	case GIC_DIST_CTRL:
+	case GIC_DIST_CTR:
+	case GIC_DIST_IIDR:
+	case GIC_DIST_SOFTINT:
+		emu_mmio_regs(emu_mmio);
+		break;
+	case GIC_DIST_IGROUP ... GIC_DIST_IGROUPn:
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_IGROUP, 1);
+		break;
+
+	case GIC_DIST_ENABLE_SET ... GIC_DIST_ENABLE_SETn:
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_ENABLE_SET, 1);
+		break;
+
+	case GIC_DIST_ENABLE_CLEAR ... GIC_DIST_ENABLE_CLEARn:
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_ENABLE_CLEAR, 1);
+		break;
+
+	case GIC_DIST_PENDING_SET ... GIC_DIST_PENDING_SETn:
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_PENDING_SET, 1);
+		break;
+
+	case GIC_DIST_PENDING_CLEAR ... GIC_DIST_PENDING_CLEARn:
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_PENDING_CLEAR, 1);
+		break;
+
+	case GIC_DIST_ACTIVE_SET ... GIC_DIST_ACTIVE_SETn:
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_ACTIVE_SET, 1);
+		break;
+
+	case GIC_DIST_ACTIVE_CLEAR ... GIC_DIST_ACTIVE_CLEARn:
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_ACTIVE_CLEAR, 1);
+		break;
+
+	case GIC_DIST_PRI ... GIC_DIST_PRIn: 
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_PRI, 8);
+		break;
+
+	case GIC_DIST_TARGET ... GIC_DIST_TARGETn:
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_TARGET, 8);
+		break;
+
+	case GIC_DIST_CONFIG ... GIC_DIST_CONFIGn: 
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_CONFIG, 2);
+		break;
+
+	case GIC_DIST_NSACR ... GIC_DIST_NSACRn:
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_NSACR, 2);
+		break;
+
+	case GIC_DIST_SGI_PENDING_CLEAR ... GIC_DIST_SGI_PENDING_CLEARn:
+		emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_SGI_PENDING_CLEAR, 8);
+		break;
+
+	case GIC_DIST_SGI_PENDING_SET ... GIC_DIST_SGI_PENDING_SETn:
+	       emu_gicd_reg(emu_mmio, reg_off, GIC_DIST_SGI_PENDING_SET, 8);
+	       break;
+
+	default:
+	       printk("%s error: unknown emu addr 0x%lx\n", __func__, emu_mmio->addr);
+	       break;
+	}
+
+	return 0;
+}
+
+static int emu_mmio_range(struct emu_mmio_access *emu_mmio)
+{
+	if (check_uart_mmio_range(emu_mmio->addr) || check_arm_local_mmio_range(emu_mmio->addr))
+	       return emu_mmio_regs(emu_mmio);
+	else if (check_gic_dist_mmio_range(emu_mmio->addr))
+		return emu_gicd_mmio_regs(emu_mmio);
 
 	return 0;
 }
@@ -192,7 +293,7 @@ int emul_device(struct pt_regs *regs, unsigned long fault_addr, unsigned int esr
 			emu_mmio.reg_width, emu_mmio.sign_ext);
 #endif
 
-	emu_mmio_regs(&emu_mmio);
+	emu_mmio_range(&emu_mmio);
 
 	/* 异常返回的时候，返回触发异常的下一条指令*/
 	pc_step = 2 + (2 * il);

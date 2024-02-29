@@ -2,6 +2,7 @@
 #include "io.h"
 #include <asm/pgtable.h>
 #include <irq.h>
+#include "virt.h"
 
 struct vgic {
 	unsigned long vctrl_base;
@@ -12,7 +13,39 @@ struct vgic {
 
 static struct vgic vgic;
 
+
 #define gic_vctrl_base(d) ((d)->vctrl_base)
+
+unsigned long vgic_emul_update_fields(struct emu_mmio_access *emul,
+		unsigned long reg_off,
+		unsigned long reg_group_base, int field_width,
+		unsigned long new_val, unsigned long old_val)
+{
+	int i;
+
+	int irq = ((reg_off - reg_group_base) * 8) / field_width;
+	unsigned long mask = (1UL << field_width) - 1;
+	int off = 0;
+	unsigned long data = 0;
+	unsigned long value = 0;
+	struct irq_desc *desc;
+
+	for (i = 0; i < (emul->width / field_width); i++) {
+		/* if this IRQ ower by HP, don't modify this field*/
+		desc = gic_get_irq_desc(irq + i);
+		if (!desc)
+			return 0;
+		if (desc->irq_state == IRQ_STATE_HP)
+			continue;
+
+		off = i * field_width;
+		data = (new_val >> off) & mask;
+
+		value |= (data << off); 
+	}
+
+	return value;
+}
 
 static unsigned long gich_get_elrsr(void)
 {

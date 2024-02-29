@@ -88,7 +88,7 @@ static void gic_dist_init(struct gic_chip_data *gic)
 	for (i = 32; i < gic_irqs; i += 16)
 		writel(GICD_INT_ACTLOW_LVLTRIG, base + GIC_DIST_CONFIG + i / 4);
 
-#if 0
+#if 1
 	/* Deactivate and disable all 中断（SGI， PPI， SPI）.
 	 *
 	 * 当注册中断的时候才 enable某个一个SPI中断，例如调用gic_unmask_irq()*/
@@ -172,7 +172,7 @@ int gos_gic_init(int chip, unsigned long dist_base, unsigned long cpu_base)
 	printk("%s: cpu_base:0x%x, dist_base:0x%x, gic_irqs:%d\n",
 			__func__, cpu_base, dist_base, gic->gic_irqs);
 
-	//gic_dist_init(gic);
+	gic_dist_init(gic);
 	gic_cpu_init(gic);
 
 	return 0;

@@ -23,19 +23,48 @@
 
 #define GIC_DIST_CTRL			0x000
 #define GIC_DIST_CTR			0x004
+#define GIC_DIST_IIDR			0x008
+
 #define GIC_DIST_IGROUP			0x080
+#define GIC_DIST_IGROUPn		0x0fc
+
 #define GIC_DIST_ENABLE_SET		0x100
+#define GIC_DIST_ENABLE_SETn		0x17c
+
 #define GIC_DIST_ENABLE_CLEAR		0x180
+#define GIC_DIST_ENABLE_CLEARn		0x1fc
+
 #define GIC_DIST_PENDING_SET		0x200
+#define GIC_DIST_PENDING_SETn		0x27c
+
 #define GIC_DIST_PENDING_CLEAR		0x280
+#define GIC_DIST_PENDING_CLEARn		0x2fc
+
 #define GIC_DIST_ACTIVE_SET		0x300
+#define GIC_DIST_ACTIVE_SETn		0x37c
+
 #define GIC_DIST_ACTIVE_CLEAR		0x380
+#define GIC_DIST_ACTIVE_CLEARn		0x3fc
+
 #define GIC_DIST_PRI			0x400
+#define GIC_DIST_PRIn			0x7f8
+
 #define GIC_DIST_TARGET			0x800
+#define GIC_DIST_TARGETn		0xbf8
+
 #define GIC_DIST_CONFIG			0xc00
+#define GIC_DIST_CONFIGn		0xcfc
+
+#define GIC_DIST_NSACR                  0xe00
+#define GIC_DIST_NSACRn                 0xefc
+
 #define GIC_DIST_SOFTINT		0xf00
+
 #define GIC_DIST_SGI_PENDING_CLEAR	0xf10
+#define GIC_DIST_SGI_PENDING_CLEARn	0xf1c
+
 #define GIC_DIST_SGI_PENDING_SET	0xf20
+#define GIC_DIST_SGI_PENDING_SETn	0xf2c
 
 #define GICD_ENABLE			0x3
 #define GICD_DISABLE			0x0
@@ -87,6 +116,19 @@
 
 #define GICH_MISR_EOI			(1 << 0)
 #define GICH_MISR_U			(1 << 1)
+
+#define NR_IRQS 512 
+
+enum irq_state {
+	IRQ_STATE_FREE,
+	IRQ_STATE_HP,
+	IRQ_STATE_VM,
+};
+
+struct irq_desc {
+	unsigned int hwirq;
+	enum irq_state irq_state;
+};
 
 struct gic_chip_data {
 	unsigned long raw_dist_base;

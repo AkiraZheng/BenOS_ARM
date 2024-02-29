@@ -6,8 +6,15 @@
 #define ARM_GIC_MAX_NR 1
 static struct gic_chip_data gic_data[ARM_GIC_MAX_NR];
 
+struct irq_desc irq_desc[NR_IRQS];
+
 /* IRQs start ID */
 #define HW_IRQ_START 16
+
+struct irq_desc *gic_get_irq_desc(int hwirq)
+{
+	return &irq_desc[hwirq];
+}
 
 static unsigned long gic_get_dist_base(void)
 {
@@ -71,13 +78,19 @@ unsigned char gicv2_get_prio(int irq)
 
 void gicv2_mask_irq(int irq)
 {
+	irq_desc[irq].irq_state = IRQ_STATE_FREE;
+
 	gic_set_irq(irq, GIC_DIST_ENABLE_CLEAR);
 }
 
 void gicv2_unmask_irq(int irq)
 {
+	irq_desc[irq].irq_state = IRQ_STATE_HP;
+	irq_desc[irq].hwirq = irq;
+
 	gic_set_irq(irq, GIC_DIST_ENABLE_SET);
 }
+
 
 void gicv2_eoi_irq(int irq)
 {
