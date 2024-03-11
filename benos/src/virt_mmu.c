@@ -4,7 +4,7 @@
 #include "error.h"
 
 /*
- * 本实验采用 “IPA 44Bits + 4KB页面 + 4级映射“ 的方式来创建S2页表。
+ * 本实验采用 “IPA 40Bits + 4KB页面 + 4级映射“ 的方式来创建S2页表。
  *
  * 根页表（root page table）的大小为4KB
  * */
@@ -33,7 +33,7 @@ static unsigned long get_vtcr_el2(unsigned int parange, unsigned int ipa_bits,
        /* 
 	* 根据IPA位宽来得到memory region。memory region计算方式： 2^(64-T0SZ) bytes
 	*
-	* t0sz =  表示 43bits IPA
+	* t0sz =  表示 40bits IPA
 	* */
 	value |= ((64 - ipa_bits) << 0);
 
@@ -44,7 +44,7 @@ static unsigned long get_vtcr_el2(unsigned int parange, unsigned int ipa_bits,
 	 * SL0:表示从第几级页表开始查询
 	 *
 	 * 从ARMv8.6手册，Table D5-13可知：
-	 * 对于4KB粒度+44bits IPA来说，应该从level1 开始查找
+	 * 对于4KB粒度+40bits IPA来说，可以从level0 开始查找
 	 *
 	 * SL0 = 0: start with level 2
 	 * SL0 = 1: start with level1
@@ -89,6 +89,12 @@ void write_stage2_pg_reg(void)
 		ipa_bits = 44;
 		pgtable_levels = 4;
 	} 
+
+	/* FIX Me: 
+	 *
+	 * 树莓派4B最大PA size支持40bits，我们这里强制把ipa_bits设置为40bits,
+	 * 验证40bits的IPA，能否用4级页表映射*/
+	ipa_bits = 40;
 
 	val = get_vtcr_el2(parange, ipa_bits, pgtable_levels, tg);
 	write_sysreg(val, vtcr_el2);

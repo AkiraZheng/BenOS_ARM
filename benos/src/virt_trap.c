@@ -31,7 +31,7 @@ void do_vm_mem_abort(unsigned long fault_ipa, unsigned int esr, struct pt_regs *
 	/* hpfar_el2 左移8位等于真实地址*/
 	fault_ipa = fault_ipa << 8;
 	fault_ipa &= PAGE_MASK;
-	//printk("%s fault IPA 0x%lx ec 0x%x\n", __func__, fault_ipa, ec);
+	printk("%s fault IPA 0x%lx ec 0x%x\n", __func__, fault_ipa, ec);
 
 	if ((fault_ipa >= PBASE) && fault_ipa < (PBASE + DEVICE_SIZE))
 		prot = S2_PAGE_DEVICE;
