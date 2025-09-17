@@ -1,10 +1,12 @@
 #include "uart.h"
 
 extern void ldr_test(void);
+extern void my_memcpy_test(void);
 
 void my_ldr_test(void)
 {
 	ldr_test(); // Call the external assembly function
+	my_memcpy_test();//memcpy test
 }
 
 void kernel_main(void)
