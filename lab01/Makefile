@@ -1,6 +1,6 @@
 ARMGNU ?= aarch64-linux-gnu
 
-board ?= rpi4
+board ?= rpi3
 
 ifeq ($(board), rpi3)
 COPS += -DCONFIG_BOARD_PI3B
