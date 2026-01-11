@@ -1,3 +1,4 @@
 tags
 *.tags
 cscope.*
+compile_commands.json
