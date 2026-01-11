@@ -12,6 +12,7 @@ endif
 
 COPS += -g -Wall -nostdlib -nostdinc -Iinclude
 ASMOPS = $(COPS) -g -Iinclude
+# ASMOPS = -g -Iinclude # 这个是原先错误的写法
 
 BUILD_DIR = build
 SRC_DIR = src
