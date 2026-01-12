@@ -27,3 +27,25 @@ my_memcpy_test:
     b.cc 1b // if not done, repeat
     
     ret
+
+/*
+   汇编器 lab1： 使用汇编伪操作指令来实现一张表
+ */
+.align 3
+.global func_addr
+func_addr:
+	.quad  0x800800
+	.quad  0x800860
+	.quad  0x800880
+
+.align 3
+.global func_string
+func_string:
+	.asciz "func_a"
+	.asciz "func_b"
+	.asciz "func_c"
+
+.align 3
+.global func_num_syms
+func_num_syms:
+	.quad  3
