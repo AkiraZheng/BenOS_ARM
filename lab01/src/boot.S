@@ -1,6 +1,7 @@
 #include "mm.h"
+#include "sysregs.h"
 
-.section  .rodata
+.section .rodata
 .align 3 // align to 8 bytes
 .globl el_string1
 el_string1:
@@ -18,25 +19,54 @@ proc_hang:
 	b 	proc_hang
 
 master:
-    /* init uart and print the string*/
+	/* init uart and print the string */
 	bl __init_uart
-	bl print_el
 
-	adr	x0, bss_begin
-	adr	x1, bss_end
-	sub	x1, x1, x0
-	bl 	memzero
+	mrs x5, CurrentEL		// Read CurrentEL
+	cmp x5, #CurrentEL_EL3
+	b.eq el3_entry
+	b el2_entry
 
-	mov	sp, #LOW_MEMORY 
-	bl	kernel_main
-	b 	proc_hang		// should never come here
+el3_entry:
+	eret
+
+el2_entry:
+	bl print_el //It should print "Booting at EL2"
+
+	/* The Execution state for EL1 is AArch64 */
+	ldr x0, =HCR_HOST_NVHE_FLAGS
+	msr hcr_el2, x0
+
+	ldr x0, =SCTRL_VALUE_MMU_DISABLED
+	msr sctlr_el1, x0
+
+	ldr x0, =SPSR_EL1
+	msr spsr_el2, x0
+
+	adr x0, el1_entry
+	msr elr_el2, x0
+
+	eret
+
+el1_entry:
+	/* Now in EL1 */
+	bl print_el //It should print "Booting at EL1"
+
+	adr x0, _bss
+	adr x1, _ebss
+	sub x1,x1,x0
+	bl memzero
+
+	mov sp, #LOW_MEMORY
+	bl kernel_main
+	b proc_hang		// Should never return here
 
 print_el:
 	mov x10, x30
 
-	/*
-	   print EL
-	 */
+	/* 
+		print EL
+	*/
 	adrp x0, el_string1
 	add x0, x0, :lo12:el_string1
 	bl put_string_uart

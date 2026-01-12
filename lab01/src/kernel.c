@@ -49,6 +49,37 @@ void my_ldr_test(void)
 	my_memset((void*)0x200004, 0xAA, 102);
 }
 
+/*
+ * 在带参数的宏，#号作为一个预处理运算符,
+ * 可以把记号转换成字符串
+ *
+ * 下面这句话会在预编译阶段变成：
+ *  asm volatile("mrs %0, " "reg" : "=r" (__val)); __val; });
+ */
+#define read_sysreg(reg) ({ \
+		unsigned long _val; \
+		asm volatile("mrs %0," #reg \
+		: "=r"(_val)); \
+		_val; \
+})
+
+#define write_sysreg(val, reg) ({ \
+		unsigned long _val = (unsigned long)val; \
+		asm volatile("msr " #reg ", %x0" \
+		:: "rZ"(_val)); \
+})
+
+static void test_sysregs(void)
+{
+	unsigned long el;
+
+	el = read_sysreg(CurrentEL);
+	printk("el = %d\n", el >> 2);
+
+	write_sysreg(0x10000, vbar_el1);
+	printk("read vbar: 0x%x\n", read_sysreg(vbar_el1));
+}
+
 void kernel_main(void)
 {
 	uart_init();
@@ -61,6 +92,9 @@ void kernel_main(void)
 
 	/* 汇编器lab1：查表 */
 	print_func_name(0x800880);
+
+	/*内嵌汇编 lab5：实现读和写系统寄存器的宏*/
+	test_sysregs();
 
 	while (1) {
 		uart_send(uart_recv());
