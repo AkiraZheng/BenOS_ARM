@@ -52,6 +52,11 @@ el1_entry:
 	/* Now in EL1 */
 	bl print_el //It should print "Booting at EL1"
 
+	/* 设置 EL1 的异常向量表地址到 vbar 寄存器中 */
+	ldr x5, =vectors
+	msr vbar_el1, x5
+	isb
+
 	adr x0, _bss
 	adr x1, _ebss
 	sub x1,x1,x0

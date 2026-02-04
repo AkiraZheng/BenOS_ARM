@@ -76,9 +76,26 @@ static void test_sysregs(void)
 	el = read_sysreg(CurrentEL);
 	printk("el = %d\n", el >> 2);
 
-	write_sysreg(0x10000, vbar_el1);
-	printk("read vbar: 0x%x\n", read_sysreg(vbar_el1));
+	// write_sysreg(0x10000, vbar_el2);
+	// printk("read vbar: 0x%x\n", read_sysreg(vbar_el2));
 }
+
+//对应异常向量表inv_entry函数传入的reason参数：0~3
+static const char * const bad_mode_handler[] = {
+	"Sync Abort",
+	"IRQ",
+	"FIQ",
+	"SError",
+};
+
+void bad_mode(struct pt_regs *regs, int reason, unsigned long esr)
+{
+	printk("Bad mode for %s, far:0x%x, esr:0x%016llx\n",//其中far_el1为故障地址寄存器
+		bad_mode_handler[reason],
+		read_sysreg(far_el1),
+		esr);
+}
+extern void trigger_alignment(void);
 
 void kernel_main(void)
 {
@@ -95,6 +112,9 @@ void kernel_main(void)
 
 	/*内嵌汇编 lab5：实现读和写系统寄存器的宏*/
 	test_sysregs();
+
+	/*异常处理*/
+	trigger_alignment();
 
 	while (1) {
 		uart_send(uart_recv());
