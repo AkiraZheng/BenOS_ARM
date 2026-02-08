@@ -92,10 +92,10 @@ el0_fiq_invalid:
 el0_serror_invalid:
     inv_entry 0, BAD_ERROR
 
-// entry.S
-string_test:		//83004
-    .string "t"		//t 和 \0 分别占用83004和83005两个字节
-    @ .align 2        //对齐到4字节地址，使代码执行到trigger_alignment时不触发异常
+// // entry.S
+// string_test:		//83004
+//     .string "t"		//t 和 \0 分别占用83004和83005两个字节
+//     // .align 2        //对齐到4字节地址，使代码执行到trigger_alignment时不触发异常
 
 .global trigger_alignment
 trigger_alignment:		 //执行到这里变差83006，是未对齐的地址，触发异常
@@ -103,5 +103,6 @@ trigger_alignment:		 //执行到这里变差83006，是未对齐的地址，触�
     //在 ARM v8 中，指令通常是 4 字节对齐的
     // 而0x83006不是4的倍数，所以访问的是没有4字节对齐的地址，进而触发对齐异常
     ldr x0, =0x80002
-    ldr x1, [x0]
+    //ldr x1, [x0]
+    str wzr, [x0]
     ret
