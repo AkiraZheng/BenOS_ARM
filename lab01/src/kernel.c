@@ -2,6 +2,7 @@
 #include "memset.h"
 #include "esr.h"
 #include "irq.h"
+#include "asm/base.h"
 
 extern void ldr_test(void);
 extern void my_memcpy_test(void);
@@ -227,6 +228,11 @@ void kernel_main(void)
        /*异常处理*/
 	//trigger_alignment();
 	printk("done\n");
+
+#ifndef CONFIG_BOARD_PI3B
+       /* 初始化 GICv2 中断控制器 */
+       gic_init(0, GIC_V2_DISTRIBUTOR_BASE, GIC_V2_CPU_INTERFACE_BASE);
+#endif
 
 	timer_init();
 	raw_local_irq_enable();

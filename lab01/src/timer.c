@@ -42,6 +42,11 @@ void timer_init(void)
 	generic_timer_init();
 	generic_timer_reset(val);
 
+#ifndef CONFIG_BOARD_PI3B
+	/* 使能 GICv2 中的 GENERIC_TIMER_IRQ 中断 */
+	gicv2_unmask_irq(GENERIC_TIMER_IRQ);
+#endif
+
 	enable_timer_interrupt();
 }
 
