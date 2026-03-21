@@ -3,6 +3,7 @@
 #include "esr.h"
 #include "irq.h"
 #include "asm/base.h"
+#include "mm.h"
 
 extern void ldr_test(void);
 extern void my_memcpy_test(void);
@@ -48,8 +49,8 @@ void my_ldr_test(void)
 	ldr_test(); // Call the external assembly function
 	my_memcpy_test();//memcpy test
 	// __memset_16bytes((void*)0x200000, 0x5555555555555555, 128);//memset test
-	my_memset((void*)0x200000, 0x55, 128);//memset test
-	my_memset((void*)0x200004, 0xAA, 102);
+	memset((void*)0x200000, 0x55, 128);//memset test
+	memset((void*)0x200004, 0xAA, 102);
 }
 
 /*
@@ -197,6 +198,14 @@ void parse_esr(unsigned int esr)
        }
 }
 
+void panic(void)
+{
+       printk("Kernel panic\n");
+
+       while (1)
+               ;
+}
+
 void bad_mode(struct pt_regs *regs, int reason, unsigned long esr)
 {
 	printk("Bad mode for %s, far:0x%x, esr:0x%016llx - %s\n",//其中far_el1为故障地址寄存器
@@ -206,7 +215,46 @@ void bad_mode(struct pt_regs *regs, int reason, unsigned long esr)
 		esr_get_class_string(esr));
 
 	parse_esr(esr);
+
+       panic();
 }
+
+static int test_access_map_address(void)
+{
+       unsigned long address = TOTAL_MEMORY - 4096;
+
+       *(unsigned long *)address = 0x55;
+
+       printk("%s access 0x%x done\n", __func__, address);
+
+       return 0;
+}
+
+/*
+ * 访问一个没有建立映射的地址
+ * 应该会触发一级页表访问错误。
+ *
+ * Translation fault, level 1
+ *
+ * 见armv8.6手册第2995页
+ */
+static int test_access_unmap_address(void)
+{
+       unsigned long address = TOTAL_MEMORY + 4096;
+
+       *(unsigned long *)address = 0x55;
+
+       printk("%s access 0x%x done\n", __func__, address);
+
+       return 0;
+}
+
+static void test_mmu(void)
+{
+       test_access_map_address();//在已经建立页表的512MB内访问内存
+       test_access_unmap_address();//在建立映射之外的地址进行访问：触发abort
+}
+
 extern void trigger_alignment(void);
 
 void kernel_main(void)
@@ -228,13 +276,16 @@ void kernel_main(void)
        /*异常处理*/
 	//trigger_alignment();
 	printk("done\n");
+       
+       paging_init();
+       test_mmu();
 
 #ifndef CONFIG_BOARD_PI3B
        /* 初始化 GICv2 中断控制器 */
        gic_init(0, GIC_V2_DISTRIBUTOR_BASE, GIC_V2_CPU_INTERFACE_BASE);
 #endif
 
-	timer_init();
+	// timer_init();
 	raw_local_irq_enable();
 
 	while (1) {
