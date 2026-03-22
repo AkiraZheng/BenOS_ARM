@@ -185,7 +185,7 @@ static void create_identical_mapping(void)
     __create_pgd_mapping((pgd_t *)idmap_pg_dir, start, start,
                     end - start, PAGE_KERNEL_ROX,
                     early_pgtable_alloc,
-                    0);
+                    0);//flags 是 0，表示不设置NO_BLOCK_MAPPINGS标志
 
     /* 创建 512 MB 内存的页表 */
     /*map memory*/

@@ -10,8 +10,8 @@ COPS += -DCONFIG_BOARD_PI4B
 QEMU_FLAGS  += -machine raspi4
 endif
 
-COPS += -g -Wall -nostdlib -Iinclude -mgeneral-regs-only
-ASMOPS = $(COPS) -g -Iinclude
+COPS += -g3 -Wall -nostdlib -Iinclude -mgeneral-regs-only
+ASMOPS = $(COPS) -g3 -Iinclude
 # ASMOPS = -g -Iinclude # 这个是原先错误的写法
 
 BUILD_DIR = build
