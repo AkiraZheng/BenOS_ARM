@@ -72,7 +72,7 @@ static void alloc_init_pmd(pud_t *pudp, unsigned long addr,
                next = pmd_addr_end(addr, end);
 
                if (((addr | next | phys) & ~SECTION_MASK) == 0 && // 地址对齐检查
-                               (flags & NO_BLOCK_MAPPINGS) == 0) // flags 检查出是NO_BLOCK_MAPPINGS块映射
+                               (flags & NO_BLOCK_MAPPINGS) == 0) // flags 检查出是LOCK_MAPPINGS块映射
                        pmd_set_section(pmdp, phys, prot);
                else
                        alloc_init_pte(pmdp, addr, next, phys,
@@ -283,4 +283,6 @@ void paging_init(void)
         cpu_init();//配置CPU启动MMU的各种寄存器配置，比如页表粒度（4KB）、va/pa地址范围（48bits）、内存属性...
         enable_mmu();//使能mmu使能位、填充L0页表基地址到TTBR0中
         printk("enable mmu done\n");
+
+        dump_pgtable();
 }

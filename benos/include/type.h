@@ -55,6 +55,7 @@ typedef unsigned int size_t;
 #define max(a, b) (((a) > (b))?(a):(b))
 
 #define DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
+// 提取数组内有多少个元素
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 #endif
